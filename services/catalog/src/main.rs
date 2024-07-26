@@ -24,7 +24,11 @@ async fn openapi() -> Json<utoipa::openapi::OpenApi> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().expect("Can't find .env file or variables");
+    let server = std::env::var("SERVER");
+    let db_connection_string = std::env::var("DATABASE_URL");
+    if server.is_err() || db_connection_string.is_err() {
+        dotenv::dotenv().expect("Can't find .env file or variables and can't load them");
+    }
 
     let server_port_address = std::env::var("SERVER")?;
     let db_url = std::env::var("DATABASE_URL")?;
