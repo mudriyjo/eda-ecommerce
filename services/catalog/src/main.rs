@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{response::Html, routing::get, Extension, Json};
 use sqlx::PgPool;
 use utoipa::OpenApi;
@@ -21,27 +23,70 @@ struct ApiDoc;
 async fn openapi() -> Json<utoipa::openapi::OpenApi> {
     Json(ApiDoc::openapi())
 }
+#[derive(Debug)]
 struct Env {
     pub(crate) server_address: String,
-    pub(crate) db_connection_string: String
+    pub(crate) db_connection_string: String,
+    pub(crate) kafka_group_id: String,
+    pub(crate) kafka_broker: String,
 }
 
-async fn get_env_variables() -> anyhow::Result<Env> {
-    let server = std::env::var("SERVER");
-    let db_connection_string = std::env::var("DATABASE_URL");
-    // Read .env only if in local env some of variable is empty
-    if server.is_err() || db_connection_string.is_err() {
-        dotenv::dotenv().expect("Can't find .env file or variables and can't load them");
+impl Env {
+    fn list_of_variables() -> HashMap<String, Option<String>> {
+        vec![
+            ("SERVER".to_string(), None),
+            ("DATABASE_URL".to_string(), None),
+            ("KAFKA_GROUP_ID".to_string(), None),
+            ("KAFKA_BROKER".to_string(), None),
+        ].into_iter().collect()
     }
-    let server_address = std::env::var("SERVER")?;
-    let db_connection_string = std::env::var("DATABASE_URL")?;
-    Ok(Env{server_address, db_connection_string})
+    
+    fn not_all_variables_exist(env_variables: &HashMap<String, Option<String>>) -> bool {
+        env_variables.iter().any(|entry| entry.1.is_none())
+    }
+
+    fn read_all_variables(env_variables: &mut HashMap<String, Option<String>>) {
+        for entry in env_variables.iter_mut() {
+            if let Ok(variable) = std::env::var(entry.0) {
+                *entry.1 = Some(variable)
+            }
+        }
+    }
+
+    pub fn new() -> anyhow::Result<Self> {
+        let mut variables = Self::list_of_variables();
+        
+        // Read from env 
+        Self::read_all_variables(&mut variables);
+
+        if Self::not_all_variables_exist(&variables) {
+            dotenv::dotenv().expect("Can't find .env file or variables and can't load them");
+        }
+        
+        // Read after read from .env file
+        Self::read_all_variables(&mut variables);
+
+        if Self::not_all_variables_exist(&variables) {
+            let var_string = variables.iter_mut().fold("".to_string(), |mut acc, el| {
+                acc.push_str(format!("{} : {:?} \n", el.0, el.1).as_str());
+                acc
+            });
+            anyhow::bail!(format!("Not all variables exist: {}", var_string))
+        } else {
+            Ok(Env{
+                server_address: variables.get("SERVER").unwrap().clone().unwrap(),
+                db_connection_string: variables.get("DATABASE_URL").unwrap().clone().unwrap(),
+                kafka_group_id: variables.get("KAFKA_GROUP_ID").unwrap().clone().unwrap(),
+                kafka_broker: variables.get("KAFKA_BROKER").unwrap().clone().unwrap()
+            })
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    
-    let env = get_env_variables().await?;
+    let env = Env::new()?;
+
     let pool = PgPool::connect(&env.db_connection_string).await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
