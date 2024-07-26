@@ -5,6 +5,7 @@ use rdkafka::{consumer::{Consumer, StreamConsumer}, ClientConfig};
 use sqlx::PgPool;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use tower_http::services::ServeDir;
 
 mod env;
 
@@ -34,6 +35,7 @@ async fn listening_kafka_topic(kafka_consumer: &StreamConsumer) {
         }
     }).await;
 }
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
@@ -63,10 +65,14 @@ async fn main() -> anyhow::Result<()> {
     let extension_pool = pool.clone();
     let connection = tokio::net::TcpListener::bind(env.server_address).await?;
 
+    // Initialize static file handler
+    let static_handler = ServeDir::new("./resources");
+
     let router = axum::Router::new()
         .route("/", get(index))
         .route("/swagger/openapi.json", get(openapi))
         .merge(SwaggerUi::new("/swagger-ui"))
+        .fallback_service(static_handler)
         .layer(Extension(extension_pool));
 
     tracing::info!("Start server...");
