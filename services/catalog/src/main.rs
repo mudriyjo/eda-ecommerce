@@ -29,6 +29,7 @@ struct Env {
 async fn get_env_variables() -> anyhow::Result<Env> {
     let server = std::env::var("SERVER");
     let db_connection_string = std::env::var("DATABASE_URL");
+    // Read .env only if in local env some of variable is empty
     if server.is_err() || db_connection_string.is_err() {
         dotenv::dotenv().expect("Can't find .env file or variables and can't load them");
     }
