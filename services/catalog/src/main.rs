@@ -21,18 +21,27 @@ struct ApiDoc;
 async fn openapi() -> Json<utoipa::openapi::OpenApi> {
     Json(ApiDoc::openapi())
 }
+struct Env {
+    pub(crate) server_address: String,
+    pub(crate) db_connection_string: String
+}
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn get_env_variables() -> anyhow::Result<Env> {
     let server = std::env::var("SERVER");
     let db_connection_string = std::env::var("DATABASE_URL");
     if server.is_err() || db_connection_string.is_err() {
         dotenv::dotenv().expect("Can't find .env file or variables and can't load them");
     }
+    let server_address = std::env::var("SERVER")?;
+    let db_connection_string = std::env::var("DATABASE_URL")?;
+    Ok(Env{server_address, db_connection_string})
+}
 
-    let server_port_address = std::env::var("SERVER")?;
-    let db_url = std::env::var("DATABASE_URL")?;
-    let pool = PgPool::connect(&db_url).await?;
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    
+    let env = get_env_variables().await?;
+    let pool = PgPool::connect(&env.db_connection_string).await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
@@ -41,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     let extension_pool = pool.clone();
-    let connection = tokio::net::TcpListener::bind(server_port_address).await?;
+    let connection = tokio::net::TcpListener::bind(env.server_address).await?;
 
     let router = axum::Router::new()
         .route("/", get(index))
