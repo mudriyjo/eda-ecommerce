@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 
 [workspace]
-members = ["services/catalog"]
+members = [ "services/auth","services/catalog"]
