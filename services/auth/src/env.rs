@@ -64,7 +64,7 @@ impl Env {
                 kafka_broker: variables.get("KAFKA_BROKER").unwrap().clone().unwrap(),
                 jwt_secret: variables.get("JWT_SECRET").unwrap().clone().unwrap(),
                 jwt_expires_in: variables.get("JWT_EXPIRED_IN").unwrap().clone().unwrap(),
-                jwt_maxage: variables.get("JWT_MAXAGE").unwrap().clone().unwrap().parse().unwrap(),
+                jwt_maxage: variables.get("JWT_MAXAGE").unwrap().clone().unwrap().parse().expect("Can't parse JWT_MAXAGE to i32"),
             })
         }
     }
