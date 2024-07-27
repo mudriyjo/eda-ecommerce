@@ -6,15 +6,22 @@ pub struct Env {
     pub(crate) db_connection_string: String,
     pub(crate) kafka_group_id: String,
     pub(crate) kafka_broker: String,
+    pub(crate) jwt_secret: String,
+    pub(crate) jwt_expires_in: String,
+    pub(crate) jwt_maxage: i32,
 }
 
 impl Env {
+    // TODO make only one point to change
     fn list_of_variables() -> HashMap<String, Option<String>> {
         vec![
             ("AUTH_SERVER".to_string(), None),
             ("AUTH_DATABASE_URL".to_string(), None),
             ("KAFKA_GROUP_ID".to_string(), None),
             ("KAFKA_BROKER".to_string(), None),
+            ("JWT_SECRET".to_string(), None),
+            ("JWT_EXPIRED_IN".to_string(), None),
+            ("JWT_MAXAGE".to_string(), None),
         ].into_iter().collect()
     }
     
@@ -51,10 +58,13 @@ impl Env {
             anyhow::bail!(format!("Not all variables exist: {}", var_string))
         } else {
             Ok(Env{
-                server_address: variables.get("SERVER").unwrap().clone().unwrap(),
-                db_connection_string: variables.get("DATABASE_URL").unwrap().clone().unwrap(),
+                server_address: variables.get("AUTH_SERVER").unwrap().clone().unwrap(),
+                db_connection_string: variables.get("AUTH_DATABASE_URL").unwrap().clone().unwrap(),
                 kafka_group_id: variables.get("KAFKA_GROUP_ID").unwrap().clone().unwrap(),
-                kafka_broker: variables.get("KAFKA_BROKER").unwrap().clone().unwrap()
+                kafka_broker: variables.get("KAFKA_BROKER").unwrap().clone().unwrap(),
+                jwt_secret: variables.get("JWT_SECRET").unwrap().clone().unwrap(),
+                jwt_expires_in: variables.get("JWT_EXPIRED_IN").unwrap().clone().unwrap(),
+                jwt_maxage: variables.get("JWT_MAXAGE").unwrap().clone().unwrap().parse().unwrap(),
             })
         }
     }
