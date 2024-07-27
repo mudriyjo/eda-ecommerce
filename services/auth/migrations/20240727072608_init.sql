@@ -3,16 +3,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS
     "users" (
-        id UUID NOT NULL PRIMARY KEY DEFAULT (uuid_generate_v4()),
+        id SERIAL NOT NULL PRIMARY KEY,
+        uuid UUID NOT NULL DEFAULT (uuid_generate_v4()),
         name VARCHAR(100) NOT NULL,
-        phone VARCHAR(12) NOT NULL UNIQUE,
+        phone VARCHAR(12) NOT NULL,
         verified BOOLEAN NOT NULL DEFAULT FALSE,
-        password VARCHAR(100) NOT NULL,
+        code VARCHAR(9) NOT NULL,
         role VARCHAR(50) NOT NULL DEFAULT 'user',
         created_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP
         WITH
             TIME ZONE DEFAULT NOW()
     );
